@@ -26,45 +26,34 @@ public class InsertSamples {
 
     private void run() throws UnknownHostException, InterruptedException {
         Mongo mongo = new Mongo("127.0.0.1", 27017);
-        System.out.println("starting 10 clients, each of which shall insert 100.000 documents");
         long l = System.currentTimeMillis();
 
         mongo.getDB("test").getCollection("samples").drop();
 
         Set<Thread> list = new HashSet<Thread>(10);
-        for (int i = 0; i < 10; i++) {
-            InsertThread t = new InsertThread("thread" + i, mongo.getDB("test"));
+        int numClients = 1;
+        int documentsPerClient = 1000000;
+
+        System.out.println("starting " + numClients + " clients, each of which shall insert " + documentsPerClient + " documents");
+
+        for (int i = 0; i < numClients; i++) {
+            InsertThread t = new InsertThread("thread" + i, mongo.getDB("test"), numClients, documentsPerClient);
             t.start();
             list.add(t);
         }
-        /*
-        boolean running = true;
-        do {
-            running = false;
-            synchronized (this) {
-                wait(100);
-            }
-            for (Thread thread : list) {
-                if (thread.isAlive()) {
-                    running = true;
-                    break;
-                }
-            }
-            System.out.println("still running? " + running);
-        }
-        while (running);
-
-        System.out.println("1.000.000 inserts finished after " + (System.currentTimeMillis() - l) + "ms.");
-        */
     }
 
     private class InsertThread extends Thread {
         private final String threadName;
         private final DB db;
+        private final int numClients;
+        private final int documentsPerClient;
 
-        public InsertThread(String threadName, DB db) {
+        public InsertThread(String threadName, DB db, int numClients, int documentsPerClient) {
             this.threadName = threadName;
             this.db = db;
+            this.numClients = numClients;
+            this.documentsPerClient = documentsPerClient;
         }
 
         @Override
@@ -74,7 +63,7 @@ public class InsertSamples {
             DBCollection samples = db.getCollection("samples");
             int bulkSize = 1000;
             List<DBObject> list = new ArrayList<DBObject>(bulkSize);
-            for (int i = 0; i < 100000; i++) {
+            for (int i = 0; i < documentsPerClient; i++) {
                 list.add(BasicDBObjectBuilder.start("client", this.threadName).add("docNum", i).add("time", new Date()).get());
                 if (i >= (bulkSize - 1)) {
                     samples.insert(list, WriteConcern.NORMAL);
@@ -84,7 +73,7 @@ public class InsertSamples {
             }
 
             float time = (System.currentTimeMillis() - t) / 1000f;
-            System.out.println(threadName + " finished after " + time + "secs. given this is the last thread to finish, that means " + (1000000 / time) + " inserts per second.");
+            System.out.println(threadName + " finished after " + time + "secs. given this is the last thread to finish, that means " + ((documentsPerClient * numClients) / time) + " inserts per second.");
         }
     }
 }
