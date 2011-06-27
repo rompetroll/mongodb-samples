@@ -54,11 +54,23 @@ public class InsertSamples {
             this.numClients = numClients;
             this.documentsPerClient = documentsPerClient;
             this.list = new ArrayList();
+            Random rnd = new Random();
             for (int i = 0; i < documentsPerClient; i++) {
-                DBObject o = BasicDBObjectBuilder.start("client", this.threadName).add("docNum", i).add("time", new Date()).get();
+                int day = 25;
+                int hour = 7 + rnd.nextInt(12);
+                int minute = rnd.nextInt(60);
+                int second = rnd.nextInt(60);
+                DBObject o = BasicDBObjectBuilder.start("client", this.threadName)
+                        .add("docNum", i)
+                        .add("time", BasicDBObjectBuilder.start("day", day)
+                                .add("hour", hour)
+                                .add("minute", minute)
+                                .add("second", second).get()).get();
+
+                //DBObject o = BasicDBObjectBuilder.start("client", this.threadName).add("docNum", i).add("time", new Date()).get();
                 list.add(o);
             }
-            System.out.println("client "+threadName+" ready.");
+            System.out.println("client " + threadName + " ready.");
         }
 
         @Override
